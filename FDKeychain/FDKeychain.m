@@ -101,42 +101,8 @@ NSString * const FDKeychainErrorDomain = @"com.1414degrees.keychain";
 	return item;
 }
 
-<<<<<<< HEAD
-+ (NSArray*)servicesForKey: (NSString *)key
-             inAccessGroup: (NSString *)accessGroup
-                     error: (NSError **)error
-{
-    NSDictionary *serviceNames = [self _serviceNamesForKey: key
-                                             inAccessGroup: accessGroup
-                                                     error: error];
-	
-	// Extract the items' service names
-    NSMutableArray * array = [NSMutableArray array];
-	
-	for (id dict in serviceNames) {
- 		NSString * name = [dict objectForKey: (__bridge id)kSecAttrService];
-        [array addObject:[name copy]];
-	}
-    
-    NSLog(@"array is %@", array);
-    return array;
-}
-
-+ (NSArray*)servicesForKey: (NSString *)key
-                     error: (NSError **)error
-{
-    NSArray * array = [FDKeychain servicesForKey: key
-                                   inAccessGroup: nil
-                                           error: error];
-    
-    return array;
-}
-
-+ (void)saveItem: (id<NSCoding>)item 
-=======
-+ (BOOL)saveItem: (id<NSCoding>)item 
->>>>>>> upstream/master
-	forKey: (NSString *)key 
++ (BOOL)saveItem: (id<NSCoding>)item
+	forKey: (NSString *)key
 	forService: (NSString *)service 
 	inAccessGroup: (NSString *)accessGroup 
 	withAccessibility: (FDKeychainAccessibility)accessibility
@@ -225,12 +191,14 @@ NSString * const FDKeychainErrorDomain = @"com.1414degrees.keychain";
 					{
 						[attributes setObject: (__bridge id)kSecAttrAccessibleWhenUnlockedThisDeviceOnly
 							forKey: (__bridge id)kSecAttrAccessible];
+                        
 						break;
 					}
 					case FDKeychainAccessibleAfterFirstUnlockThisDeviceOnly:
 					{
 						[attributes setObject: (__bridge id)kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
 							forKey: (__bridge id)kSecAttrAccessible];
+                        
 						break;
 					}
 //					case FDKeychainAccessibleAlways:
@@ -293,6 +261,21 @@ NSString * const FDKeychainErrorDomain = @"com.1414degrees.keychain";
 						
 						break;
 					}
+                        
+                    case FDKeychainAccessibleWhenUnlockedThisDeviceOnly:
+                    {
+                        [attributesToUpdate setObject: (__bridge id)kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+                            forKey: (__bridge id)kSecAttrAccessible];
+                        
+                        break;
+                    }
+                    case FDKeychainAccessibleAfterFirstUnlockThisDeviceOnly:
+                    {
+                        [attributesToUpdate setObject: (__bridge id)kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+                            forKey: (__bridge id)kSecAttrAccessible];
+                        
+                         break;
+                    }
 				}
 				
 				OSStatus resultCode = SecItemUpdate((__bridge CFDictionaryRef)queryDictionary, (__bridge CFDictionaryRef)attributesToUpdate);
@@ -548,48 +531,80 @@ NSString * const FDKeychainErrorDomain = @"com.1414degrees.keychain";
 	return itemAttributesAndData;
 }
 
+
 + (NSDictionary *)_serviceNamesForKey: (NSString *)key
                         inAccessGroup: (NSString *)accessGroup
                                 error: (NSError **)error
 {
-	// Raise exception if either the key or the service parameter are empty.
-	if (FDIsEmpty(key) == YES)
-	{
-		[NSException raise: NSInvalidArgumentException
-                    format: @"%s key argument cannot be nil",
+    // Raise exception if either the key is empty.
+    if ([key length] == 0)
+    {
+        [NSException raise: NSInvalidArgumentException
+                    format: @"%s key argument cannot be empty",
          __PRETTY_FUNCTION__];
-	}
-	
-	// Load the item from the keychain that matches the key, service and access group.
-	NSMutableDictionary *queryDictionary = [FDKeychain _baseQueryDictionaryForKey: key
+    }
+    
+    // Load the item from the keychain that matches the key, service and access group.
+    NSMutableDictionary *queryDictionary = [FDKeychain _baseQueryDictionaryForKey: key
                                                                        forService: nil
                                                                     inAccessGroup: accessGroup];
-	
-	[queryDictionary setObject: (__bridge id)kSecMatchLimitAll
-                        forKey: (__bridge id)kSecMatchLimit];
-	[queryDictionary setObject: (id)kCFBooleanTrue
-                        forKey: (__bridge id)kSecReturnAttributes];
-	
-	CFTypeRef itemAttributesTypeRef = nil;
-	
-	OSStatus resultCode = SecItemCopyMatching((__bridge CFDictionaryRef)queryDictionary, &itemAttributesTypeRef);
-	
-	NSDictionary *itemAttributes = nil;
-	
-	if (resultCode != errSecSuccess)
-	{
-		if (error != NULL)
-		{
-			*error = [self _errorForResultCode: resultCode 
-                                       withKey: key 
-                                    forService: nil];
-		}
-	}
-	else
-	{
-		itemAttributes = (__bridge_transfer NSDictionary *)itemAttributesTypeRef;
-	}
     
-	return itemAttributes;
+    [queryDictionary setObject: (__bridge id)kSecMatchLimitAll
+                        forKey: (__bridge id)kSecMatchLimit];
+    [queryDictionary setObject: (id)kCFBooleanTrue
+                        forKey: (__bridge id)kSecReturnAttributes];
+    
+    CFTypeRef itemAttributesTypeRef = nil;
+    
+    OSStatus resultCode = SecItemCopyMatching((__bridge CFDictionaryRef)queryDictionary, &itemAttributesTypeRef);
+    
+    NSDictionary *itemAttributes = nil;
+    
+    if (resultCode != errSecSuccess)
+    {
+        if (error != NULL)
+        {
+            *error = [self _errorForResultCode: resultCode
+                                       withKey: key
+                                    forService: nil];
+        }
+    }
+    else
+    {
+        itemAttributes = (__bridge_transfer NSDictionary *)itemAttributesTypeRef;
+    }
+    
+    return itemAttributes;
 }
+
++ (NSArray*)servicesForKey: (NSString *)key
+             inAccessGroup: (NSString *)accessGroup
+                     error: (NSError **)error
+{
+    NSDictionary *serviceNames = [self _serviceNamesForKey: key
+                                             inAccessGroup: accessGroup
+                                                     error: error];
+    
+    // Extract the items' service names
+    NSMutableArray * array = [NSMutableArray array];
+    
+    for (id dict in serviceNames) {
+        NSString * name = [dict objectForKey: (__bridge id)kSecAttrService];
+        [array addObject:[name copy]];
+    }
+    
+    NSLog(@"array is %@", array);
+    return array;
+}
+
++ (NSArray*)servicesForKey: (NSString *)key
+                     error: (NSError **)error
+{
+    NSArray * array = [FDKeychain servicesForKey: key
+                                   inAccessGroup: nil
+                                           error: error];
+    
+    return array;
+}
+
 @end
